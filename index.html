@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOORS | Генератор разборов Daily Run</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --card-bg: #1e1e24;
+            --accent: #d4af37;
+            --accent-hover: #b5952f;
+            --text-main: #e1e1e6;
+            --text-muted: #a8a8b3;
+            --border: #29292e;
+            --success: #04d361;
+            --disabled: #323238;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        h1 {
+            color: var(--accent);
+            text-align: center;
+            grid-column: 1 / -1;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        h2 {
+            color: var(--accent);
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .step-progress {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        /* Управление видимостью шагов */
+        .step-content {
+            display: none;
+            flex-grow: 1;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input[type="number"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+        .row .form-group {
+            flex: 1;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-color);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+
+        .toggle-group:hover {
+            border-color: var(--accent);
+        }
+
+        .toggle-group label {
+            margin: 0;
+            color: var(--text-main);
+            cursor: pointer;
+            flex: 1;
+            user-select: none;
+        }
+
+        .toggle-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .qty-input {
+            width: 70px !important;
+            margin-left: 10px;
+            text-align: center;
+            padding: 6px !important;
+        }
+
+        .qty-input:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .section-title {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 15px 0 10px 0;
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            height: 480px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95rem;
+            resize: vertical;
+            box-sizing: border-box;
+            line-height: 1.5;
+        }
+
+        .controls-nav {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background-color: var(--disabled);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--border);
+            color: var(--accent);
+        }
+        
+        #scroll-container {
+            max-height: 340px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        #scroll-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        #scroll-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>✦ 𝘿𝘼𝙄𝙇𝙔 𝙍𝙐𝙉 𝙂𝙀𝙉𝙀𝙍𝘼𝙏𝙊𝙍 ✦</h1>
+
+    <!-- ПОШАГОВАЯ ФОРМА ВВОДА -->
+    <div class="card">
+        <div>
+            <div class="step-progress" id="stepIndicator">Шаг 1 из 5</div>
+            
+            <!-- ШАГ 1: НОМЕР РАНА -->
+            <div class="step-content active" data-step="1">
+                <h2>🔢 Номер забега</h2>
+                <div class="form-group">
+                    <label for="runNumber">Введи номер рана (Daily Run)</label>
+                    <input type="number" id="runNumber" value="161" min="1">
+                </div>
+            </div>
+
+            <!-- ШАГ 2: ВРЕМЯ ПРОХОЖДЕНИЯ -->
+            <div class="step-content" data-step="2">
+                <h2>⏰ Время прохождения</h2>
+                <div class="row">
+                    <div class="form-group">
+                        <label for="timeMin">Минуты</label>
+                        <input type="number" id="timeMin" value="2" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="timeSec">Секунды</label>
+                        <input type="number" id="timeSec" value="50" min="0" max="59">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ШАГ 3: КОМНАТЫ И ЭТАЖИ -->
+            <div class="step-content" data-step="3">
+                <h2>🗺️ Локации забега</h2>
+                <div class="form-group">
+                    <label for="roomCount">Количество пройденных комнат</label>
+                    <input type="number" id="roomCount" value="20" min="1">
+                </div>
+    
+                <div class="section-title">Этажи и подэтажи</div>
+    
+                <div class="toggle-group">
+                    <label for="floorHotel">The Hotel</label>
+                    <input type="checkbox" id="floorHotel" checked>
+                </div>
+                <div class="toggle-group">
+                    <label for="floorMines">The Mines</label>
+                    <input type="checkbox" id="floorMines" checked>
+                </div>
+                <div class="toggle-group">
+                    <label for="floorBackdoor">Подэтаж: The Backdoor</label>
+                    <input type="checkbox" id="floorBackdoor" checked>
+                </div>
+                <div class="toggle-group">
+                    <label for="floorRooms">Подэтаж: The Rooms</label>
+                    <input type="checkbox" id="floorRooms">
+                </div>
+                <div class="toggle-group">
+                    <label for="floorOutdoors">Подэтаж: The Outdoors</label>
+                    <input type="checkbox" id="floorOutdoors">
+                </div>
+            </div>
+
+            <!-- ШАГ 4: СУЩНОСТИ -->
+            <div class="step-content" data-step="4">
+                <h2>🩸 Кто напал?</h2>
+                <label>Отметь встреченных сущностей за ран:</label>
+                <div id="scroll-container">
+                    <div id="entitiesList"></div>
+                </div>
+            </div>
+
+            <!-- ШАГ 5: ПРЕДМЕТЫ -->
+            <div class="step-content" data-step="5">
+                <h2>🔦 Полезный лут</h2>
+                <label>Выбери предметы, что ты встретил и их количество:</label>
+                <div id="scroll-container">
+                    <div id="itemsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- КНОПКИ НАВИГАЦИИ -->
+        <div class="controls-nav">
+            <button type="button" class="btn btn-secondary" id="prevBtn" onclick="changeStep(-1)" disabled>⬅️ Назад</button>
+            <button type="button" class="btn" id="nextBtn" onclick="changeStep(1)">Далее ➡️</button>
+        </div>
+    </div>
+
+    <!-- ПРЕВЬЮ И ВЫВОД ТЕКСТА -->
+    <div class="card">
+        <h2>📋 Готовый результат (Live-превью)</h2>
+        <textarea id="output" readonly></textarea>
+        <button type="button" class="btn" onclick="copyToClipboard()" id="copyBtn">📋 Скопировать разбор</button>
+    </div>
+</div>
+
+<script>
+    // === СТРОГИЕ СПИСКИ ИЗ ТВОЕГО ШАБЛОНА ===
+    const entitiesList = [
+        "Вакуум", "Хайд", "Дред", "Скрич", "Гиггл", "Дюп", "Раш", "Амбуш", "Блитз", "Глаза", "Лукмен", "Снейр", "Мракомыши", "Фигура", "Халт", "Луи", "Тимоти", "Салли"
+    ];
+
+    const itemsList = [
+        "Возможен торг с Луи, из-за этого могут быть другие предметы", "Крест", "Отмычки", "Нагрудный фонарик", "Фонарик", "Прожектор", "Фонарь", "Зажигалка", "Свечка", "Люминесцентная палочка", "Лазерная указка", "Пиво (Смузи)", "Скелетный ключ", "Витамины", "Хлеб", "Пончик", "Алоэ", "Батарейки", "Пластыри", "Пачка батареек", "Пачка пластырей", "Банка для чаевых"
+    ];
+
+    let currentStep = 1;
+    const totalSteps = 5;
+
+    // === НАВИГАЦИЯ СЛАЙДЕРА ===
+    function changeStep(direction) {
+        // Сохраняем текущий шаг
+        document.querySelector(`.step-content[data-step="${currentStep}"]`).classList.remove('active');
+        
+        // Меняем индекс
+        currentStep += direction;
+        if (currentStep < 1) currentStep = 1;
+        if (currentStep > totalSteps) currentStep = totalSteps;
+        
+        // Показываем новый шаг
+        document.querySelector(`.step-content[data-step="${currentStep}"]`).classList.add('active');
+        
+        // Обновляем кнопки и индикатор
+        document.getElementById('stepIndicator').innerText = `Шаг ${currentStep} из ${totalSteps}`;
+        document.getElementById('prevBtn').disabled = (currentStep === 1);
+        
+        if (currentStep === totalSteps) {
+            document.getElementById('nextBtn').innerText = "Готово 🎉";
+        } else {
+            document.getElementById('nextBtn').innerText = "Далее ➡️";
+        }
+        generateText();
+    }
+
+    // === СКЛОНЕНИЯ СЛОВ ===
+    function declension(number, titles) {
+        const cases = [2, 0, 1, 1, 1, 2];
+        return titles[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[(number % 10 < 5) ? number % 10 : 5]];
+    }
+
+    function formatTime(min, sec) {
+        const minStr = declension(min, ['минута', 'минуты', 'минут']);
+        const secStr = declension(sec, ['секунда', 'секунды', 'секунд']);
+        return `${min} ${minStr} ${sec} ${secStr}`;
+    }
+
+    // === СБОР ДАННЫХ И СБОРКА ТЕКСТА ===
+function generateText() {
+    const runNum = document.getElementById('runNumber').value || '1';
+    const rooms = document.getElementById('roomCount').value || '0';
+    
+    // 1. Собираем основные этажи
+    let floorsArr = [];
+    if (document.getElementById('floorHotel').checked) floorsArr.push("The Hotel");
+    if (document.getElementById('floorMines').checked) floorsArr.push("The Mines");
+    let floorsText = floorsArr.join('; ') || "Нет основ. этажей";
+    
+    // 2. Собираем подэтажи (массив динамически заполняется)
+    let subFloorsArr = [];
+    if (document.getElementById('floorBackdoor').checked) subFloorsArr.push("The Backdoor");
+    if (document.getElementById('floorRooms').checked) subFloorsArr.push("The Rooms");
+    if (document.getElementById('floorOutdoors').checked) subFloorsArr.push("The Outdoors");
+
+    // 3. Логика зависимости от количества выбранных подэтажей
+    let backdoorText = "";
+    if (subFloorsArr.length > 0) {
+        // Если длина массива больше 1 — пишем во множественном числе, иначе в единственном
+        let subFloorLabel = subFloorsArr.length > 1 ? "подэтажи" : "подэтаж";
+        backdoorText = `, ${subFloorLabel} – ${subFloorsArr.join(', ')}`;
+    }
+
+    // Время прохождения
+    const min = parseInt(document.getElementById('timeMin').value) || 0;
+    const sec = parseInt(document.getElementById('timeSec').value) || 0;
+    const timeText = formatTime(min, sec);
+
+    // Собираем сущностей
+    let entitiesText = "";
+    document.querySelectorAll('.entity-check:checked').forEach(chk => {
+        entitiesText += `⋄ ${chk.dataset.name}\n`;
+    });
+    if (entitiesText === "") entitiesText = "⋄ Нет существ\n";
+
+    // Собираем предметы
+    let itemsText = "";
+    document.querySelectorAll('.item-check:checked').forEach(chk => {
+        const idx = chk.dataset.index;
+        const qty = document.getElementById(`item_qty_${idx}`).value;
+        const name = chk.dataset.name;
+        
+        if (qty > 1) {
+            itemsText += `⋄ ${name} (${qty})\n`;
+        } else {
+            itemsText += `⋄ ${name}\n`;
+        }
+    });
+    if (itemsText === "") itemsText = "⋄ Нет предметов\n";
+
+    // Финальный шаблон
+    const finalText = `✦ㅤ ㅤ 𝘿𝘼𝙄𝙇𝙔 𝙍𝙐𝙉  |  ${runNum}
+
+⟪───⟡═══🔥═══⟡───⟫
+
+🚪ㅤ ㅤ Комнаты
+
+⋄ ${rooms} ${declension(rooms, ['комната', 'комнаты', 'комнат'])}. Этажи – ${floorsText}${backdoorText}.
+
+⟪───⟡────────⟡───⟫
+
+⏰ㅤ ㅤ Время прохождения
+
+⋄ В среднем ${timeText}. 
+
+⟪───⟡────────⟡───⟫
+
+🩸ㅤ ㅤ Сущности
+
+${entitiesText.trim()}
+
+⟪───⟡────────⟡───⟫
+
+🔦ㅤ ㅤ Предметы
+
+${itemsText.trim()}
+
+⟪───⟡═══🔥═══⟡───⟫
+
+➤ Подписаться на ɢᴜɪᴅɪɴɢ ʟɪɢʜᴛ || ᴅᴏᴏʀs ɴᴇᴡs
+
+#Roblox
+#Doors #RobloxDoors  #Daily_Run`;
+
+        document.getElementById('output').value = finalText;
+    }
+
+
+    // === КОПИРОВАНИЕ С БУФЕРОМ (ОЛДСКУЛ-ФИТ ДЛЯ ОФФЛАЙНА) ===
+    function copyToClipboard() {
+        const text = document.getElementById('output').value;
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = text;
+        tempTextArea.style.position = 'fixed';
+        tempTextArea.style.left = '-9999px';
+        document.body.appendChild(tempTextArea);
+        tempTextArea.focus();
+        tempTextArea.select();
+        
+        try {
+            if (document.execCommand('copy')) {
+                showCopySuccess();
+            } else {
+                alert('Ошибка. Скопируй руками из правого окна.');
+            }
+        } catch (err) {
+            alert('Браузер заблокировал копирование. Выдели текст вручную.');
+        }
+        document.body.removeChild(tempTextArea);
+    }
+
+    function showCopySuccess() {
+        const btn = document.getElementById('copyBtn');
+        const originalText = btn.innerText;
+        btn.innerText = "✅ Скопировано в буфер!";
+        btn.style.backgroundColor = "var(--success)";
+        btn.style.color = "#fff";
+        
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.backgroundColor = "var(--accent)";
+            btn.style.color = "#000";
+        }, 1500);
+    }
+
+    // === РЕНДЕР СПИСКОВ И СЛУШАТЕЛИ ===
+    function init() {
+        // Рендер сущностей
+        const entContainer = document.getElementById('entitiesList');
+        let entHtml = '';
+        entitiesList.forEach((ent, index) => {
+            entHtml += `
+                <div class="toggle-group">
+                    <label for="ent_${index}">${ent}</label>
+                    <input type="checkbox" id="ent_${index}" class="entity-check" data-name="${ent}">
+                </div>
+            `;
+        });
+        entContainer.innerHTML = entHtml;
+
+        // Рендер предметов
+        const itemContainer = document.getElementById('itemsList');
+        let itemHtml = '';
+        itemsList.forEach((item, index) => {
+            itemHtml += `
+                <div class="toggle-group">
+                    <label for="item_chk_${index}">${item}</label>
+                    <div style="display: flex; align-items: center;">
+                        <input type="checkbox" id="item_chk_${index}" class="item-check" data-index="${index}" data-name="${item}">
+                        <input type="number" id="item_qty_${index}" class="qty-input" value="1" min="1" disabled>
+                    </div>
+                </div>
+            `;
+        });
+        itemContainer.innerHTML = itemHtml;
+
+        // Включение/выключение счетчиков количества предметов
+        document.querySelectorAll('.item-check').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                const qtyInput = document.getElementById(`item_qty_${e.target.dataset.index}`);
+                qtyInput.disabled = !e.target.checked;
+                if (!e.target.checked) qtyInput.value = 1;
+                generateText();
+            });
+        });
+
+        // Вешаем автообновление на абсолютно все инпуты на странице
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', generateText);
+            input.addEventListener('change', generateText);
+        });
+
+        generateText();
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
