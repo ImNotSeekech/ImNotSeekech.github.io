@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>скажи пока данным</title>
+    <style>
+        /* === ПОДКЛЮЧЕНИЕ ШРИФТА === */
+        @font-face {
+            font-family: 'TermuxFont';
+            src: url('termux.ttf') format('truetype'); /* Твой путь к ttf шрифту терминала */
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0d0d11;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* === ЭКРАН 1: ЛОВУШКА === */
+        #trap-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .rainbow-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 40px;
+            background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+            background-size: 400% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+            animation: rainbowShift 4s linear infinite, swingText 2s ease-in-out infinite alternate;
+        }
+
+        .scam-btn {
+            background-color: #e50914;
+            color: #ffffff;
+            font-size: 1.8rem;
+            font-weight: bold;
+            padding: 20px 60px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(229, 9, 20, 0.6);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .scam-btn:hover {
+            transform: scale(1.1);
+            background-color: #ff1f29;
+            box-shadow: 0 0 40px rgba(229, 9, 20, 0.9);
+        }
+
+        /* === ЭКРАН 2: ТЕРМИНАЛ === */
+        #terminal-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+            color: #02ff17; 
+            
+            font-family: 'TermuxFont', 'Consolas', 'Courier New', monospace; 
+            font-size: 0.85rem; 
+            line-height: 1.3;
+            letter-spacing: 0.5px;
+            
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            text-shadow: 0 0 2px rgba(0, 255, 0, 0.3);
+        }
+
+        .critical { color: #ff3333; text-shadow: 0 0 4px rgba(255, 51, 51, 0.6); }
+        .warning { color: #ffff00; }
+        .success { color: #00ffff; }
+        .muted { color: #555555; }
+
+        /* Идеальное отображение ASCII арта из точек */
+        pre {
+            font-family: inherit;
+            font-size: inherit;
+            line-height: 1.2;
+            margin: 15px 0;
+            color: #ff2222;
+            text-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
+        }
+
+        @keyframes rainbowShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes swingText {
+            0% { transform: rotate(-5deg) scale(0.95); }
+            100% { transform: rotate(5deg) scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="trap-screen">
+        <h1 class="rainbow-title">НАЖМИ НА КНОПКУ</h1>
+        <button class="scam-btn" onclick="startPrank()">НАЖМИ</button>
+    </div>
+
+    <div id="terminal-screen"></div>
+
+<script>
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const randHex = (len) => [...Array(len)].map(() => rand(0,15).toString(16)).join('');
+    const randMAC = () => [...Array(6)].map(() => randHex(2).toUpperCase()).join(':');
+    
+    let currentPort = 1;
+    let currentHop = 1;
+    let hexOffset = 4120;
+
+    // Твой крутейший детализированный ASCII-глаз
+    const asciiEye = `⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣤⣤⣤⣤⣴⣤⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⣀⣴⣾⠿⠛⠋⠉⠁⠀⠀⠀⠈⠙⠻⢷⣦⡀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⣤⣾⡿⠋⠁⠀⣠⣶⣿⡿⢿⣷⣦⡀⠀⠀⠀⠙⠿⣦⣀⠀⠀⠀⠀
+⠀⠀⢀⣴⣿⡿⠋⠀⠀⢀⣼⣿⣿⣿⣶⣿⣾⣽⣿⡆⠀⠀⠀⠀⢻⣿⣷⣶⣄⠀
+⠀⣴⣿⣿⠋⠀⠀⠀⠀⠸⣿⣿⣿⣿⣯⣿⣿⣿⣿⣿⠀⠀⠀⠐⡄⡌⢻⣿⣿⡷
+⢸⣿⣿⠃⢂⡋⠄⠀⠀⠀⢿⣿⣿⣿⣿⣿⣯⣿⣿⠏⠀⠀⠀⠀⢦⣷⣿⠿⠛⠁
+⠀⠙⠿⢾⣤⡈⠙⠂⢤⢀⠀⠙⠿⢿⣿⣿⡿⠟⠁⠀⣀⣀⣤⣶⠟⠋⠁⠀⠀⠀
+⠀⠀⠀⠀⠈⠙⠿⣾⣠⣆⣅⣀⣠⣄⣤⣴⣶⣾⣽⢿⠿⠟⠋⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠛⠛⠙⠋⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`;
+
+    async function startPrank() {
+        document.getElementById('trap-screen').style.display = 'none';
+        const term = document.getElementById('terminal-screen');
+        term.style.display = 'block';
+
+        // Старт в твоем стиле
+        const startSequence = [
+            { text: "starting the program...", delay: 500, class: "" },
+            { text: "wait the server...", delay: 900, class: "" },
+            { text: "started!", delay: 300, class: "success" },
+            { text: "connected to the server!", delay: 400, class: "success" },
+            { text: `session name (${rand(100000, 999999)})`, delay: 500, class: "warning" },
+            { text: 'helloworld("print!")', delay: 700, class: "critical" }
+        ];
+
+        for (let line of startSequence) {
+            await appendLine(line.text, line.class, line.delay);
+        }
+
+        await sleep(400);
+        term.innerHTML += `<br><span class="critical">[!!] TARGET NETWORK DETECTED. INITIALIZING AGGRESSIVE SNIFFING...</span><br><br>`;
+        await sleep(600);
+
+        // Бешеное месиво под Термукс (160 строк за ~5 секунд)
+        for (let i = 0; i < 160; i++) {
+            let logLine = "";
+            let decision = rand(1, 100);
+
+            if (decision <= 25 && currentPort <= 1024) {
+                let status = rand(1, 10) > 8 ? `<span class="critical">OPEN</span>` : `<span class="muted">CLOSED</span>`;
+                let service = ["http", "https", "ssh", "ftp", "dns", "smb", "mysql", "telnet"][rand(0,7)];
+                logLine = `[NMAP] TCP_PROBE: port ${currentPort}/tcp -> status: ${status} (service: ${service})`;
+                currentPort += rand(1, 5);
+            } 
+            else if (decision > 25 && decision <= 45 && currentHop <= 30) {
+                let ip = `172.${rand(16,31)}.${rand(0,255)}.${rand(1,254)}`;
+                if (currentHop === 1) ip = "192.168.1.1 (Gateway)";
+                logLine = `[ROUTE] TRACEROUTE HOP ${currentHop} | Node: ${ip} | rtt: ${rand(5, 35)}ms`;
+                currentHop++;
+            } 
+            else if (decision > 45 && decision <= 65) {
+                logLine = `[ARP] Broadcast client found: 192.168.1.${rand(2,254)} -> MAC: [${randMAC()}]`;
+            } 
+            else {
+                let hexBytes = [...Array(8)].map(() => randHex(2).toUpperCase()).join(' ');
+                let asciiFake = [...Array(8)].map(() => String.fromCharCode(rand(33, 126))).join('').replace(/[<>&]/g, '.');
+                logLine = `<span class="muted">0x${hexOffset.toString(16).toUpperCase()}</span>  <span class="warning">${hexBytes}</span>  <span class="success">|${asciiFake}|</span> PACKET_STREAM`;
+                hexOffset += 16;
+            }
+
+            term.innerHTML += logLine + "<br>";
+            term.scrollTop = term.scrollHeight;
+            await sleep(30);
+        }
+
+        // === ФИНАЛЬНАЯ ЧАСТЬ: ВЫВОД ФУЛЛ ИНФЫ О СЕТИ ===
+        await sleep(500);
+        term.innerHTML += `<br><span class="success">[+] EXFILTRATION PROTOCOL COMPLETED SUCCESSFULLY.</span><br>`;
+        term.innerHTML += `<span class="success">[+] COMPILED NETWORK GEOMETRY DATA OUT:</span><br>`;
+        term.innerHTML += `<span class="muted">----------------------------------------------------</span><br>`;
+        term.scrollTop = term.scrollHeight;
+        await sleep(800);
+
+        // Твоя точная последовательность (IP, Метрика, DNS и т.д.)
+        await appendLine(`WAN IPv4 ADDRESS:   <span class="warning">186.2.25.38</span>`, "", 300);
+        await appendLine(`SIGNAL METRIC:      <span class="warning">0.8890</span>`, "", 300);
+        await appendLine(`DNS SERVICE ROUTE:  <span class="warning">dns.proxy.provider.net [186.2.25.1]</span>`, "", 300);
+        await appendLine(`SUBNET MASK GATE:   <span class="warning">255.255.255.240</span>`, "", 200);
+        await appendLine(`GATEWAY ROUTER IP:  <span class="warning">186.2.0.1 (BGP Node: AS${rand(4000,9999)})</span>`, "", 200);
+        await appendLine(`VIRTUAL LINK ID:    <span class="warning">TUN-INTERFACE_wlan0_0x${randHex(4).toUpperCase()}</span>`, "", 200);
+        await appendLine(`DUMP FILE STATUS:   <span class="success">EXTRACTED & ENCRYPTED (AES-256)</span>`, "", 400);
+        
+        term.innerHTML += `<span class="muted">----------------------------------------------------</span><br>`;
+        term.scrollTop = term.scrollHeight;
+        await sleep(1000);
+
+        // ВЫКАДРОВКА НОВОГО ГЛАЗА И ДОБИВАНИЕ
+        term.innerHTML += `<pre>${asciiEye}</pre>`;
+        term.innerHTML += `<br><span class="critical" style="font-size: 1.2rem; display: block; text-align: center; letter-spacing: 3px;">bye bye)</span><br>`;
+        term.scrollTop = term.scrollHeight;
+    }
+
+    function appendLine(text, className, delay) {
+        return new Promise(resolve => {
+            setTimeout(() => {
+                const term = document.getElementById('terminal-screen');
+                const spanClass = className ? `class="${className}"` : '';
+                term.innerHTML += `<span ${spanClass}>${text}</span><br>`;
+                term.scrollTop = term.scrollHeight;
+                resolve();
+            }, delay);
+        });
+    }
+
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+</script>
+
+</body>
+</html>
