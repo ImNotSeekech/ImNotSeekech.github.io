@@ -22,6 +22,13 @@
             font-style: normal;
         }
 
+        @font-face {
+            font-family: 'BannerFont';
+            src: url('banner.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         :root {
             --bg-color: #121214;
             --card-bg: #1e1e24;
@@ -281,6 +288,31 @@
             background: var(--border);
             border-radius: 4px;
         }
+
+        .banner-section {
+            grid-column: 1 / -1;
+            margin-top: 10px;
+        }
+
+        .banner-preview-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #bannerPreview {
+            max-width: 100%;
+            width: 600px;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #000;
+        }
+
+        #bannerCanvas {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -388,6 +420,15 @@
         <textarea id="output" readonly></textarea>
         <button type="button" class="btn" onclick="copyToClipboard()" id="copyBtn">📋 Скопировать разбор</button>
     </div>
+
+    <div class="card banner-section">
+        <h2><span class="emoji">🖼️</span> Баннер забега</h2>
+        <div class="banner-preview-wrap">
+            <canvas id="bannerCanvas" width="1500" height="1000"></canvas>
+            <img id="bannerPreview" alt="Превью баннера Daily Run" />
+            <button type="button" class="btn" id="downloadBannerBtn" onclick="downloadBanner()" style="max-width: 320px;">⬇️ Скачать баннер</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -403,6 +444,8 @@
 
     let currentStep = 1;
     const totalSteps = 5;
+    let bannerReady = false;
+    let baseBannerImage = null;
 
     function getRunNumber() {
         const now = new Date();
@@ -474,6 +517,14 @@
         return parts.join(' ');
     }
 
+    function escapeMarkdownV2(text) {
+        return String(text).replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
+    }
+
+    function toBlockquote(text) {
+        return text.split('\n').map(line => '>' + line).join('\n');
+    }
+
     function generateText() {
         const runNum = document.getElementById('runNumber').value || '1';
         const rooms = document.getElementById('roomCount').value || '0';
@@ -498,25 +549,25 @@
         const sec = parseInt(document.getElementById('timeSec').value) || 0;
         const timeText = formatTime(min, sec);
 
-        let entitiesText = "";
+        let entitiesLines = [];
         document.querySelectorAll('.entity-check:checked').forEach(chk => {
-            entitiesText += `⋄ __${chk.dataset.name}__\n`;
+            entitiesLines.push(`⋄ __${chk.dataset.name}__`);
         });
-        if (entitiesText === "") entitiesText = "⋄ __Нет существ__\n";
+        if (entitiesLines.length === 0) entitiesLines.push("⋄ __Нет существ__");
 
-        let itemsText = "";
+        let itemsLines = [];
         document.querySelectorAll('.item-check:checked').forEach(chk => {
             const idx = chk.dataset.index;
             const qty = parseInt(document.getElementById(`item_qty_${idx}`).value) || 1;
             const name = chk.dataset.name;
             
             if (qty > 1) {
-                itemsText += `⋄ __${name} ×${qty}__\n`;
+                itemsLines.push(`⋄ __${name} ×${qty}__`);
             } else {
-                itemsText += `⋄ __${name}__\n`;
+                itemsLines.push(`⋄ __${name}__`);
             }
         });
-        if (itemsText === "") itemsText = "⋄ __Нет предметов__\n";
+        if (itemsLines.length === 0) itemsLines.push("⋄ __Нет предметов__");
 
         const includeRun = document.getElementById('includeRun').checked;
         const includeRooms = document.getElementById('includeRooms').checked;
@@ -527,27 +578,21 @@
         let bodyParts = [];
 
         if (includeRooms) {
-            bodyParts.push(`🚪ㅤ ㅤ **Комнаты**
-
-⋄ **__${rooms} ${declension(rooms, ['комната', 'комнаты', 'комнат'])}. Этажи – ${floorsText}${backdoorText}__**.`);
+            const roomsContent = `⋄ **__${rooms} ${declension(rooms, ['комната', 'комнаты', 'комнат'])}. Этажи – ${floorsText}${backdoorText}__**.`;
+            bodyParts.push(`🚪ㅤ ㅤ **Комнаты**\n\n${toBlockquote(roomsContent)}`);
         }
 
         if (includeTime) {
-            bodyParts.push(`⏰ㅤ ㅤ **Время прохождения**
-
-⋄ **__В среднем ${timeText}__**.`);
+            const timeContent = `⋄ **__В среднем ${timeText}__**.`;
+            bodyParts.push(`⏰ㅤ ㅤ **Время прохождения**\n\n${toBlockquote(timeContent)}`);
         }
 
         if (includeEntities) {
-            bodyParts.push(`🩸ㅤ ㅤ **Сущности**
-
-${entitiesText.trim()}`);
+            bodyParts.push(`🩸ㅤ ㅤ **Сущности**\n\n${toBlockquote(entitiesLines.join('\n'))}`);
         }
 
         if (includeItems) {
-            bodyParts.push(`🔦ㅤ ㅤ **Предметы**
-
-${itemsText.trim()}`);
+            bodyParts.push(`🔦ㅤ ㅤ **Предметы**\n\n${toBlockquote(itemsLines.join('\n'))}`);
         }
 
         const separator = `\n\n⟪───⟡────────⟡───⟫\n\n`;
@@ -559,18 +604,23 @@ ${itemsText.trim()}`);
         }
         header += `\n\n⟪───⟡═══🔥═══⟡───⟫`;
 
+        const subscribeText = "Подписаться на ɢᴜɪᴅɪɴɢ ʟɪɢʜᴛ || ᴅᴏᴏʀs ɴᴇᴡs";
+        const subscribeLink = `[${escapeMarkdownV2(subscribeText)}](https://t.me/GuidingLightDoorsNews)`;
+
         const finalText = `${header}
 
 ${body}
 
 ⟪───⟡═══🔥═══⟡───⟫
 
-➤ Подписаться на ɢᴜɪᴅɪɴɢ ʟɪɢʜᴛ || ᴅᴏᴏʀs ɴᴇᴡs
+➤ ${subscribeLink}
 
 #Roblox
 #Doors #RobloxDoors  #Daily_Run`;
 
         document.getElementById('output').value = finalText;
+
+        updateBanner();
     }
 
     function copyToClipboard() {
@@ -607,6 +657,56 @@ ${body}
             btn.style.backgroundColor = "var(--accent)";
             btn.style.color = "#000";
         }, 1500);
+    }
+
+    function loadBannerImage() {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error("Не удалось загрузить banner.jpg"));
+            img.src = "banner.jpg";
+        });
+    }
+
+    function updateBanner() {
+        if (!baseBannerImage) return;
+
+        const canvas = document.getElementById('bannerCanvas');
+        const ctx = canvas.getContext('2d');
+        const runNum = document.getElementById('runNumber').value || getRunNumber();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(baseBannerImage, 0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'difference';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '143px BannerFont, Impact, Arial Black, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const textX = canvas.width / 2;
+        const textY = 670;
+        ctx.fillText(String(runNum), textX, textY);
+        ctx.restore();
+
+        const preview = document.getElementById('bannerPreview');
+        preview.src = canvas.toDataURL('image/jpeg', 0.92);
+        bannerReady = true;
+    }
+
+    function downloadBanner() {
+        if (!bannerReady) {
+            alert('Баннер ещё не готов');
+            return;
+        }
+        const canvas = document.getElementById('bannerCanvas');
+        const runNum = document.getElementById('runNumber').value || getRunNumber();
+        const link = document.createElement('a');
+        link.download = `Daily_Run_${runNum}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
     }
 
     function init() {
@@ -657,6 +757,21 @@ ${body}
         document.querySelectorAll('.section-toggle').forEach(chk => {
             chk.addEventListener('change', generateText);
         });
+
+        document.getElementById('runNumber').addEventListener('input', () => {
+            generateText();
+            updateBanner();
+        });
+
+        loadBannerImage()
+            .then(img => {
+                baseBannerImage = img;
+                updateBanner();
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('bannerPreview').alt = "Положите banner.jpg рядом с index.html";
+            });
 
         generateText();
     }
