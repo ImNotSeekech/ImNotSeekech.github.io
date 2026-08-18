@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DOORS | Генератор разборов Daily Run</title>
     <style>
-        @font-face {
+    @font-face {
             font-family: 'TextFont';
             src: url('text.ttf') format('truetype');
             font-weight: normal;
@@ -24,9 +24,11 @@
 
         @font-face {
             font-family: 'BannerFont';
-            src: url('banner.ttf') format('truetype');
+            src: url('banner.ttf') format('truetype'),
+                 url('./banner.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
+            font-display: block;
         }
 
         :root {
@@ -427,6 +429,7 @@
             <canvas id="bannerCanvas" width="1500" height="1000"></canvas>
             <img id="bannerPreview" alt="Превью баннера Daily Run" />
             <button type="button" class="btn" id="downloadBannerBtn" onclick="downloadBanner()" style="max-width: 320px;">⬇️ Скачать баннер</button>
+            <div id="fontLoader" style="font-family: 'BannerFont'; position: absolute; left: -9999px; top: -9999px; font-size: 250px; opacity: 0; pointer-events: none;" aria-hidden="true">0123456789</div>
         </div>
     </div>
 </div>
@@ -444,8 +447,9 @@
 
     let currentStep = 1;
     const totalSteps = 5;
-    let bannerReady = false;
+    let bannerFontReady = false;
     let baseBannerImage = null;
+    let bannerReady = false;
 
     function getRunNumber() {
         const now = new Date();
@@ -518,11 +522,11 @@
     }
 
     function escapeMarkdownV2(text) {
-        return String(text).replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
+        return String(text).replace(/([_*\[\]()~`>#+\-={}.!\\])/g, '\\$1');
     }
 
     function toBlockquote(text) {
-        return text.split('\n').map(line => '>' + line).join('\n');
+        return text.split('\n').map(line => '' + line).join('\n');
     }
 
     function generateText() {
@@ -615,8 +619,8 @@ ${body}
 
 ➤ ${subscribeLink}
 
-#Roblox
-#Doors #RobloxDoors  #Daily_Run`;
+**#Roblox**
+**#Doors #RobloxDoors  #Daily_Run**`;
 
         document.getElementById('output').value = finalText;
 
@@ -669,6 +673,57 @@ ${body}
         });
     }
 
+    function loadBannerFont() {
+        return new Promise((resolve) => {
+            if (typeof FontFace === 'undefined') {
+                bannerFontReady = false;
+                resolve(false);
+                return;
+            }
+
+            const sources = [
+                "url('banner.ttf') format('truetype')",
+                "url('./banner.ttf') format('truetype')",
+                "url('banner.ttf')"
+            ];
+
+            let attempt = 0;
+
+            function tryLoad() {
+                if (attempt >= sources.length) {
+                console.warn('banner.ttf не удалось загрузить ни одним способом');
+                    bannerFontReady = false;
+                    resolve(false);
+                    return;
+                }
+
+                const font = new FontFace('BannerFont', sources[attempt]);
+                attempt++;
+
+                font.load()
+                    .then(loaded => {
+                        document.fonts.add(loaded);
+                        return document.fonts.load('250px BannerFont');
+                    })
+                    .then(() => {
+                        return document.fonts.ready;
+                    })
+                    .then(() => {
+                        const ok = document.fonts.check('250px BannerFont') ||
+                                   document.fonts.check('250px "BannerFont"');
+                        bannerFontReady = true;
+                        console.log('BannerFont успешно добавлен в document.fonts, check =', ok);
+                        resolve(true);
+                    })
+                    .catch(() => {
+                        tryLoad();
+                    });
+            }
+
+            tryLoad();
+        });
+    }
+
     function updateBanner() {
         if (!baseBannerImage) return;
 
@@ -680,15 +735,21 @@ ${body}
         ctx.drawImage(baseBannerImage, 0, 0, canvas.width, canvas.height);
 
         ctx.save();
+
         ctx.globalCompositeOperation = 'difference';
         ctx.fillStyle = '#ffffff';
-        ctx.font = '143px BannerFont, Impact, Arial Black, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
+        ctx.font = '250px BannerFont';
+
         const textX = canvas.width / 2;
-        const textY = 670;
-        ctx.fillText(String(runNum), textX, textY);
+        const textY = 630;
+
+        ctx.translate(textX, textY);
+        ctx.scale(1.2, 1); // растягиваем ТОЛЬКО по X
+        ctx.fillText(String(runNum), 0, 0);
+
         ctx.restore();
 
         const preview = document.getElementById('bannerPreview');
@@ -774,6 +835,28 @@ ${body}
             });
 
         generateText();
+
+    const fontLoaderEl = document.getElementById('fontLoader');
+    if (fontLoaderEl) {
+        void fontLoaderEl.offsetWidth;
+    }
+
+    Promise.all([loadBannerImage(), loadBannerFont()])
+        .then(([img, fontOk]) => {
+            baseBannerImage = img;
+            return document.fonts.ready.then(() => {
+                updateBanner();
+                setTimeout(updateBanner, 30);
+                setTimeout(updateBanner, 100);
+                setTimeout(updateBanner, 300);
+                setTimeout(updateBanner, 600);
+                setTimeout(updateBanner, 1200);
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('bannerPreview').alt = "Положите banner.jpg и banner.ttf рядом с index.html";
+        });
     }
 
     window.onload = init;
