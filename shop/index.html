@@ -1,1 +1,1308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOORS | Анализатор скинов</title>
+<style>
+    @font-face {
+        font-family: 'TextFont';
+        src: url('text.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
 
+    @font-face {
+        font-family: 'EmojiFont';
+        src: url('emojis.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    :root {
+        --bg-color: #121214;
+        --card-bg: #1e1e24;
+        --accent: #d4af37;
+        --accent-hover: #b5952f;
+        --text-main: #e1e1e6;
+        --text-muted: #a8a8b3;
+        --border: #29292e;
+        --success: #04d361;
+        --danger: #e5484d;
+        --disabled: #323238;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: 'TextFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    .emoji {
+        font-family: 'EmojiFont', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    }
+
+    .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        max-width: 1200px;
+        width: 100%;
+        align-items: start;
+    }
+
+    @media (max-width: 768px) {
+        .container { grid-template-columns: 1fr; }
+    }
+
+    h1 {
+        color: var(--accent);
+        text-align: center;
+        grid-column: 1 / -1;
+        margin-bottom: 4px;
+        font-weight: 300;
+        letter-spacing: 2px;
+        font-family: 'TextFont', 'Segoe UI', sans-serif;
+    }
+
+    .subtitle {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: var(--text-muted);
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+    }
+
+    .card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    h2 {
+        color: var(--accent);
+        font-size: 1.2rem;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .step-progress {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+
+    .step-content { display: none; flex-grow: 1; }
+    .step-content.active { display: block; }
+
+    .form-group { margin-bottom: 18px; }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    input[type="number"], input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        background-color: var(--bg-color);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-main);
+        font-size: 1rem;
+        box-sizing: border-box;
+        font-family: 'TextFont', 'Segoe UI', sans-serif;
+    }
+
+    input[type="number"]:focus, input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .dropzone {
+        border: 2px dashed var(--border);
+        border-radius: 10px;
+        padding: 30px 15px;
+        text-align: center;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 18px;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+        border-color: var(--accent);
+        color: var(--text-main);
+    }
+
+    .dropzone input { display: none; }
+
+    .preview-wrap {
+        display: none;
+        margin-bottom: 18px;
+        text-align: center;
+    }
+
+    .preview-wrap.active { display: block; }
+
+    #previewImg {
+        max-width: 100%;
+        max-height: 260px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+
+    .progress-wrap {
+        display: none;
+        margin-bottom: 18px;
+    }
+
+    .progress-wrap.active { display: block; }
+
+    .progress-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .progress-bar-bg {
+        width: 100%;
+        height: 10px;
+        background: var(--bg-color);
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+        transition: width 0.2s;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 14px;
+        background-color: var(--accent);
+        color: #000;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'TextFont', 'Segoe UI', sans-serif;
+    }
+
+    .btn:hover:not(:disabled) {
+        background-color: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    .btn:disabled {
+        background-color: var(--disabled);
+        color: var(--text-muted);
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-secondary {
+        background-color: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-main);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        background-color: var(--border);
+        color: var(--accent);
+    }
+
+    .btn-small {
+        width: auto;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+    }
+
+    .controls-nav {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .hint {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: -10px;
+        margin-bottom: 18px;
+        line-height: 1.4;
+    }
+
+    #scroll-container {
+        max-height: 480px;
+        overflow-y: auto;
+        padding-right: 5px;
+        margin-bottom: 15px;
+    }
+
+    #scroll-container::-webkit-scrollbar { width: 6px; }
+    #scroll-container::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+    }
+
+    .skin-row {
+        background: var(--bg-color);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 12px;
+        position: relative;
+    }
+
+    .skin-row-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .rarity-badge {
+        font-size: 0.75rem;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+
+    .rarity-common { background: #3a3a3f; color: #e1e1e6; }
+    .rarity-epic { background: #5a2f6e; color: #e9c9ff; }
+    .rarity-mythic { background: #6e2f2f; color: #ffc9c9; }
+    .rarity-legendary { background: #6e5a2f; color: #ffe9b0; }
+
+    .remove-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .remove-btn:hover { color: var(--danger); background: rgba(229,72,77,0.1); }
+
+    .skin-row-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .skin-row-fields .full { grid-column: 1 / -1; }
+
+    .skin-row input {
+        padding: 9px 10px;
+        font-size: 0.9rem;
+    }
+
+    .field-label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: var(--text-muted);
+        padding: 30px 10px;
+        font-size: 0.9rem;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+    }
+
+    textarea {
+        width: 100%;
+        height: 460px;
+        background-color: var(--bg-color);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-main);
+        padding: 15px;
+        font-family: 'TextFont', 'Consolas', 'Monaco', monospace;
+        font-size: 0.9rem;
+        resize: vertical;
+        box-sizing: border-box;
+        line-height: 1.5;
+    }
+
+    .bundle-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .bundle-toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    /* --- Grid fitting step --- */
+    .grid-canvas-wrap {
+        width: 100%;
+        overflow-x: auto;
+        margin-bottom: 18px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #000;
+        display: flex;
+        justify-content: center;
+    }
+
+    #gridCanvas {
+        display: block;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .slider-group {
+        margin-bottom: 14px;
+    }
+
+    .slider-group-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 6px;
+    }
+
+    .slider-group-top label {
+        margin: 0;
+        color: var(--text-main);
+        font-size: 0.85rem;
+    }
+
+    .slider-value {
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: bold;
+        min-width: 46px;
+        text-align: right;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    .row-inline {
+        display: flex;
+        gap: 15px;
+    }
+    .row-inline .form-group { flex: 1; margin-bottom: 14px; }
+    .row-inline label { margin-bottom: 6px; }
+    .row-inline input[type="number"] { padding: 9px; }
+
+    .section-title {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 18px 0 10px 0;
+        font-weight: bold;
+    }
+
+    /* --- Banner step --- */
+    #bannerCanvas {
+        display: block;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .warning-box {
+        background: rgba(229,72,77,0.1);
+        border: 1px solid var(--danger);
+        color: #ffb3b5;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+        line-height: 1.4;
+        display: none;
+    }
+
+    .warning-box.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1><span class="emoji">✦</span> АНАЛИЗАТОР СКИНОВ <span class="emoji">✦</span></h1>
+    <p class="subtitle">Скрин магазина → готовый пост для канала</p>
+
+    <div class="card">
+        <div>
+            <div class="step-progress" id="stepIndicator">Шаг 1 из 3 · Скриншот</div>
+
+            <div class="step-content active" data-step="1">
+                <h2><span class="emoji">🖼</span> Загрузка магазина</h2>
+
+                <div class="dropzone" id="dropzone">
+                    <div id="dropzoneText">
+                        📎 Перетащи скриншот сюда или нажми, чтобы выбрать файл
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*">
+                </div>
+
+                <div class="preview-wrap" id="previewWrap">
+                    <img id="previewImg" alt="Превью скриншота">
+                </div>
+
+                <p class="hint">
+                    Файл не отправляется никуда — вся обработка идёт прямо в браузере. Скрин нигде не сохраняется.
+                    На следующем шаге нужно будет подогнать сетку под ячейки скинов ползунками.
+                </p>
+
+                <button type="button" class="btn" id="toGridBtn" disabled>Далее: настроить сетку →</button>
+            </div>
+
+            <div class="step-content" data-step="2">
+                <h2><span class="emoji">🔲</span> Подгонка сетки</h2>
+                <p class="hint">
+                    Двигай ползунки, пока рамки на превью не лягут ровно по границам карточек скинов.
+                    Верхний отступ должен исключать шапку (например «TODAY'S DEALS») — она не нужна для анализа.
+                </p>
+
+                <div class="grid-canvas-wrap">
+                    <canvas id="gridCanvas"></canvas>
+                </div>
+
+                <div class="row-inline">
+                    <div class="form-group">
+                        <label for="gridCols">Колонок</label>
+                        <input type="number" id="gridCols" min="1" max="8" value="4">
+                    </div>
+                    <div class="form-group">
+                        <label for="gridRows">Строк</label>
+                        <input type="number" id="gridRows" min="1" max="6" value="2">
+                    </div>
+                </div>
+
+                <div class="section-title">Положение сетки</div>
+
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="offsetTop">Отступ сверху (пропускает шапку)</label><span class="slider-value" id="offsetTopVal">0</span></div>
+                    <input type="range" id="offsetTop" min="0" max="100" value="0">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="offsetLeft">Отступ слева</label><span class="slider-value" id="offsetLeftVal">0</span></div>
+                    <input type="range" id="offsetLeft" min="0" max="100" value="0">
+                </div>
+
+                <div class="section-title">Размер ячейки</div>
+
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="cellW">Ширина ячейки</label><span class="slider-value" id="cellWVal">0</span></div>
+                    <input type="range" id="cellW" min="10" max="100" value="50">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="cellH">Высота ячейки</label><span class="slider-value" id="cellHVal">0</span></div>
+                    <input type="range" id="cellH" min="10" max="100" value="50">
+                </div>
+
+                <div class="section-title">Зазоры между ячейками</div>
+
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="gapX">Зазор по горизонтали</label><span class="slider-value" id="gapXVal">0</span></div>
+                    <input type="range" id="gapX" min="0" max="100" value="10">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="gapY">Зазор по вертикали</label><span class="slider-value" id="gapYVal">0</span></div>
+                    <input type="range" id="gapY" min="0" max="100" value="10">
+                </div>
+
+                <div class="progress-wrap" id="progressWrap">
+                    <div class="progress-label">
+                        <span id="progressText">Распознавание...</span>
+                        <span id="progressPct">0%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+                </div>
+
+                <button type="button" class="btn" id="cutAnalyzeBtn">✂️ Вырезать и распознать</button>
+            </div>
+
+            <div class="step-content" data-step="3">
+                <h2><span class="emoji">📝</span> Проверка результата</h2>
+                <label>Проверь распознанные скины, поправь то, что OCR понял неправильно:</label>
+
+                <div id="scroll-container">
+                    <div id="cardsList"></div>
+                </div>
+
+                <button type="button" class="btn btn-secondary btn-small" id="addCardBtn" style="margin-bottom: 15px;">➕ Добавить скин вручную</button>
+
+                <div class="bundle-toggle">
+                    <input type="checkbox" id="bundlesToggle">
+                    <label for="bundlesToggle" style="margin:0;">Есть новые бандлы (иначе — «Новых бандлов нет»)</label>
+                </div>
+                <div class="form-group" id="bundleTextWrap" style="display:none;">
+                    <label for="bundleText">Текст про бандлы</label>
+                    <input type="text" id="bundleText" placeholder="Напр.: Новый бандл «...» — 2999 кнобзов">
+                </div>
+
+                <button type="button" class="btn" id="toBannerBtn" style="margin-top: 10px;">Далее: собрать баннер →</button>
+            </div>
+
+            <div class="step-content" data-step="4">
+                <h2><span class="emoji">🎞</span> Баннер</h2>
+                <p class="hint">
+                    Фон и рамка подгружаются из файлов <code>bg.jpg</code> и <code>frame.png</code>, которые должны лежать
+                    рядом с этой страницей. Ползунками подгони скриншот под оранжевые уголки рамки.
+                </p>
+
+                <div class="warning-box" id="bannerWarning"></div>
+
+                <div class="grid-canvas-wrap">
+                    <canvas id="bannerCanvas" width="1500" height="1000"></canvas>
+                </div>
+
+                <div class="section-title">Положение скриншота</div>
+
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="bannerX">Сдвиг по горизонтали</label><span class="slider-value" id="bannerXVal">0</span></div>
+                    <input type="range" id="bannerX" min="-500" max="1500" value="0">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="bannerY">Сдвиг по вертикали</label><span class="slider-value" id="bannerYVal">0</span></div>
+                    <input type="range" id="bannerY" min="-500" max="1000" value="0">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="bannerScale">Масштаб</label><span class="slider-value" id="bannerScaleVal">100%</span></div>
+                    <input type="range" id="bannerScale" min="10" max="300" value="100">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-group-top"><label for="bannerRotate">Поворот</label><span class="slider-value" id="bannerRotateVal">0°</span></div>
+                    <input type="range" id="bannerRotate" min="-45" max="45" value="0">
+                </div>
+
+                <button type="button" class="btn" id="downloadBannerBtn" style="margin-top: 10px;">⬇️ Скачать баннер (PNG)</button>
+            </div>
+        </div>
+
+        <div class="controls-nav">
+            <button type="button" class="btn btn-secondary" id="prevBtn" onclick="changeStep(-1)" style="display:none;">⬅️ Назад</button>
+            <button type="button" class="btn btn-secondary" id="resetBtn" onclick="resetAll()" style="display:none;">🔄 Загрузить другой скрин</button>
+        </div>
+    </div>
+
+    <div class="card" id="resultCard">
+        <h2><span class="emoji">📋</span> Готовый пост (Live-превью)</h2>
+        <textarea id="output" readonly>Загрузи скриншот магазина, подгони сетку и нажми «Вырезать и распознать» — здесь появится готовый текст поста.</textarea>
+        <button type="button" class="btn" onclick="copyToClipboard()" id="copyBtn" style="margin-top: 15px;">📋 Скопировать пост</button>
+    </div>
+</div>
+
+<datalist id="itemsDatalist"></datalist>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<script>
+    // ---------------------------------------------------------------
+    // Справочник предметов: как их называет игра (EN, для сопоставления
+    // с распознанным текстом), и как выводить в посте (RU).
+    // ---------------------------------------------------------------
+    const ITEM_DB = [
+        { id: 'crucifix', display: 'Крест', aliases: ['crucifix', 'cross', 'крест'] },
+        { id: 'lockpicks', display: 'Отмычки', aliases: ['lockpicks', 'lockpick', 'отмычки'] },
+        { id: 'straplight', display: 'Нагрудный фонарик', aliases: ['straplight', 'strap light', 'нагрудный фонарик'] },
+        { id: 'flashlight', display: 'Фонарик', aliases: ['flashlight', 'flash light', 'фонарик'] },
+        { id: 'shakelight', display: 'Трясосвет', aliases: ['shakelight', 'shake light', 'трясосвет', 'шейклайт'] },
+        { id: 'bulklight', display: 'Прожектор', aliases: ['bulklight', 'bulk light', 'прожектор'] },
+        { id: 'lantern', display: 'Фонарь', aliases: ['lantern', 'фонарь'] },
+        { id: 'lighter', display: 'Зажигалка', aliases: ['lighter', 'зажигалка'] },
+        { id: 'candle', display: 'Свечка', aliases: ['candle', 'свечка'] },
+        { id: 'glowstick', display: 'Люминесцентная палочка', aliases: ['glowstick', 'glow stick', 'люминесцентная палочка'] },
+        { id: 'laser', display: 'Лазерная указка', aliases: ['laser pointer', 'laser', 'лазерная указка'] },
+        { id: 'smoothie', display: 'Пиво (Смузи)', aliases: ['smoothie', 'пиво', 'смузи'] },
+        { id: 'skeletonkey', display: 'Скелетный ключ', aliases: ['skeleton key', 'скелетный ключ'] },
+        { id: 'vitamins', display: 'Витамины', aliases: ['vitamins', 'vitamin', 'витамины'] },
+        { id: 'batterypack', display: 'Пачка батареек', aliases: ['battery pack', 'пачка батареек'] },
+        { id: 'bandagepack', display: 'Пачка пластырей', aliases: ['bandage pack', 'пачка пластырей', 'пластыри'] },
+        { id: 'blaster', display: 'Бластер', aliases: ['gold blaster', 'blaster', 'бластер', 'золотой бластер'] },
+        { id: 'boxinggloves', display: 'Боксерские перчатки', aliases: ['boxing gloves', 'боксерские перчатки'] },
+        { id: 'shears', display: 'Ножницы', aliases: ['shears', 'ножницы'] },
+        { id: 'gweensoda', display: 'Зелёная газировка', aliases: ['gween soda', 'green soda', 'зелёная газировка', 'зеленая газировка'] },
+        { id: 'moonlightcandle', display: 'Путеводная свеча', aliases: ['moonlight candle', 'путеводная свеча'] },
+        { id: 'moonlightfloat', display: 'Путеводное пиво (Смузи)', aliases: ['moonlight float', 'путеводное пиво', 'путеводный смузи'] }
+    ];
+
+    const RARITY_ORDER = [499, 799, 1499, 2999];
+    const RARITY = {
+        499:  { emoji: '⚪️', cls: 'rarity-common',    label: 'Обычные',    empty: 'Нет обычных скинов.',
+                sep: 'ㅤ ㅤ     ⊹₊˚‧︵‿₊୨ᰔ୧₊‿︵‧˚₊⊹\nㅤ ㅤ ㅤ     ⚪️ **Обычные**' },
+        799:  { emoji: '🟣', cls: 'rarity-epic',       label: 'Эпические',  empty: 'Нет эпических скинов.',
+                sep: 'ㅤ ㅤ ㅤ  ⊹₊˚‧︵‿₊୨ᰔ୧₊‿︵‧˚₊\nㅤㅤㅤㅤ   🟣 **Эпические**' },
+        1499: { emoji: '🔴', cls: 'rarity-mythic',     label: 'Мифические', empty: 'Нет мифических скинов.',
+                sep: 'ㅤ ㅤ ㅤ   ⊹₊˚‧︵‿₊ᰔ୧‿︵‧˚₊⊹\nㅤ ㅤ ㅤ   🔴 **Мифические**' },
+        2999: { emoji: '🟡', cls: 'rarity-legendary',  label: 'Легендарные', empty: 'Нет легендарных скинов.',
+                sep: 'ㅤ ㅤㅤㅤ  ⊹₊˚‧︵‿₊୨୧₊︵‧₊⊹\nㅤ ㅤㅤ   🟡 **Легендарные**' }
+    };
+
+    let cards = [];        // { skin, itemDisplay, price }
+    let currentStep = 1;
+    let originalImg = null; // Image element, full resolution
+
+    // Grid params — all in ORIGINAL image pixel space
+    let grid = { offsetTop: 0, offsetLeft: 0, cellW: 100, cellH: 100, gapX: 10, gapY: 10, cols: 4, rows: 2 };
+    let displayScale = 1; // displayed canvas px per original px
+
+    // ---------------------------------------------------------------
+    // Утилиты
+    // ---------------------------------------------------------------
+    function toTitleCase(s) {
+        return s.toLowerCase().replace(/(^|[\s'\-])\p{L}/gu, c => c.toUpperCase());
+    }
+
+    function extractPrice(text) {
+        const matches = text.match(/\d{2,5}/g);
+        if (!matches) return null;
+        matches.sort((a, b) => b.length - a.length);
+        return parseInt(matches[0], 10);
+    }
+
+    function normalize(s) {
+        return s.toLowerCase().replace(/[^a-zа-яё\s]/gi, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function matchItem(rawText) {
+        const norm = normalize(rawText);
+        if (!norm) return null;
+        let best = null, bestScore = 0;
+        ITEM_DB.forEach(item => {
+            item.aliases.forEach(alias => {
+                const a = normalize(alias);
+                if (!a) return;
+                if (norm.includes(a) || a.includes(norm)) {
+                    if (a.length > bestScore) { bestScore = a.length; best = item; }
+                }
+            });
+        });
+        return bestScore >= 3 ? best : null;
+    }
+
+    function rarityKeyForPrice(price) {
+        let best = RARITY_ORDER[0], bestDiff = Infinity;
+        RARITY_ORDER.forEach(k => {
+            const d = Math.abs(k - price);
+            if (d < bestDiff) { bestDiff = d; best = k; }
+        });
+        return best;
+    }
+
+    function escapeAttr(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    // ---------------------------------------------------------------
+    // Шаг 1: загрузка файла
+    // ---------------------------------------------------------------
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const previewImg = document.getElementById('previewImg');
+    const previewWrap = document.getElementById('previewWrap');
+    const toGridBtn = document.getElementById('toGridBtn');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+        if (!file.type.startsWith('image/')) {
+            alert('Нужен файл изображения (скриншот магазина).');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                originalImg = img;
+                previewImg.src = e.target.result;
+                previewWrap.classList.add('active');
+                toGridBtn.disabled = false;
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    toGridBtn.addEventListener('click', () => {
+        initGridDefaults();
+        goToStep(2);
+        redrawGridPreview();
+    });
+
+    // ---------------------------------------------------------------
+    // Шаг 2: подгонка сетки
+    // ---------------------------------------------------------------
+    const gridCanvas = document.getElementById('gridCanvas');
+    const gridCtx = gridCanvas.getContext('2d');
+
+    const sliderIds = ['offsetTop', 'offsetLeft', 'cellW', 'cellH', 'gapX', 'gapY'];
+
+    function initGridDefaults() {
+        const W = originalImg.naturalWidth;
+        const H = originalImg.naturalHeight;
+
+        const cols = 4, rows = 2;
+        const gapGuess = Math.round(W * 0.02);
+        const offsetTop = Math.round(H * 0.14);
+        const offsetLeft = Math.round(W * 0.02);
+        const cellW = Math.round((W - offsetLeft * 2 - gapGuess * (cols - 1)) / cols);
+        const cellH = Math.round((H - offsetTop - offsetLeft) / rows) - gapGuess;
+
+        grid = { offsetTop, offsetLeft, cellW, cellH, gapX: gapGuess, gapY: gapGuess, cols, rows };
+
+        document.getElementById('gridCols').value = cols;
+        document.getElementById('gridRows').value = rows;
+
+        document.getElementById('offsetTop').max = H;
+        document.getElementById('offsetTop').value = offsetTop;
+        document.getElementById('offsetLeft').max = W;
+        document.getElementById('offsetLeft').value = offsetLeft;
+        document.getElementById('cellW').max = W;
+        document.getElementById('cellW').value = cellW;
+        document.getElementById('cellH').max = H;
+        document.getElementById('cellH').value = cellH;
+        document.getElementById('gapX').max = Math.round(W * 0.25);
+        document.getElementById('gapX').value = gapGuess;
+        document.getElementById('gapY').max = Math.round(H * 0.25);
+        document.getElementById('gapY').value = gapGuess;
+
+        // Display canvas at a manageable width
+        const displayW = Math.min(W, 640);
+        displayScale = displayW / W;
+        gridCanvas.width = displayW;
+        gridCanvas.height = Math.round(H * displayScale);
+
+        updateSliderLabels();
+    }
+
+    function updateSliderLabels() {
+        document.getElementById('offsetTopVal').textContent = grid.offsetTop + 'px';
+        document.getElementById('offsetLeftVal').textContent = grid.offsetLeft + 'px';
+        document.getElementById('cellWVal').textContent = grid.cellW + 'px';
+        document.getElementById('cellHVal').textContent = grid.cellH + 'px';
+        document.getElementById('gapXVal').textContent = grid.gapX + 'px';
+        document.getElementById('gapYVal').textContent = grid.gapY + 'px';
+    }
+
+    function redrawGridPreview() {
+        if (!originalImg) return;
+        gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+        gridCtx.drawImage(originalImg, 0, 0, gridCanvas.width, gridCanvas.height);
+
+        gridCtx.lineWidth = 2;
+        gridCtx.strokeStyle = '#d4af37';
+        gridCtx.fillStyle = 'rgba(212,175,55,0.12)';
+        gridCtx.font = 'bold 13px sans-serif';
+
+        let n = 1;
+        for (let r = 0; r < grid.rows; r++) {
+            for (let c = 0; c < grid.cols; c++) {
+                const x = (grid.offsetLeft + c * (grid.cellW + grid.gapX)) * displayScale;
+                const y = (grid.offsetTop + r * (grid.cellH + grid.gapY)) * displayScale;
+                const w = grid.cellW * displayScale;
+                const h = grid.cellH * displayScale;
+                gridCtx.fillRect(x, y, w, h);
+                gridCtx.strokeRect(x, y, w, h);
+                gridCtx.fillStyle = '#d4af37';
+                gridCtx.fillText(n, x + 6, y + 16);
+                gridCtx.fillStyle = 'rgba(212,175,55,0.12)';
+                n++;
+            }
+        }
+    }
+
+    sliderIds.forEach(id => {
+        document.getElementById(id).addEventListener('input', e => {
+            grid[id] = parseInt(e.target.value, 10) || 0;
+            updateSliderLabels();
+            redrawGridPreview();
+        });
+    });
+
+    document.getElementById('gridCols').addEventListener('input', e => {
+        grid.cols = Math.max(1, parseInt(e.target.value, 10) || 1);
+        redrawGridPreview();
+    });
+    document.getElementById('gridRows').addEventListener('input', e => {
+        grid.rows = Math.max(1, parseInt(e.target.value, 10) || 1);
+        redrawGridPreview();
+    });
+
+    // ---------------------------------------------------------------
+    // Вырезание ячеек + OCR по каждой ячейке отдельно
+    // ---------------------------------------------------------------
+    function cropCellDataUrl(x, y, w, h) {
+        const upscale = 3;
+        const cw = Math.max(1, Math.round(w));
+        const ch = Math.max(1, Math.round(h));
+        const canvas = document.createElement('canvas');
+        canvas.width = cw * upscale;
+        canvas.height = ch * upscale;
+        const ctx = canvas.getContext('2d');
+        try { ctx.filter = 'grayscale(100%) contrast(135%)'; } catch (e) {}
+        ctx.drawImage(originalImg, x, y, cw, ch, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/png');
+    }
+
+    function parseCellText(text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.length) return null;
+
+        let itemIdx = lines.findIndex(l => /\bSKIN\b/i.test(l));
+        let skinName = '', itemPhrase = '', price = null;
+
+        if (itemIdx !== -1) {
+            itemPhrase = lines[itemIdx].replace(/skin/ig, '').trim();
+            skinName = itemIdx > 0 ? lines[itemIdx - 1] : '';
+            for (let j = itemIdx + 1; j < lines.length; j++) {
+                const p = extractPrice(lines[j]);
+                if (p) { price = p; break; }
+            }
+        } else {
+            // Фоллбек: нет строки со словом SKIN — берём первую строку как скин,
+            // последнюю строку с цифрами как цену, всё остальное как предмет.
+            skinName = lines[0] || '';
+            for (let j = lines.length - 1; j >= 0; j--) {
+                const p = extractPrice(lines[j]);
+                if (p) { price = p; break; }
+            }
+            const middle = lines.slice(1, -1).join(' ');
+            itemPhrase = middle || (lines.length > 1 ? lines[1] : '');
+        }
+
+        if (!price) {
+            for (const l of lines) {
+                const p = extractPrice(l);
+                if (p) { price = p; break; }
+            }
+        }
+
+        const matched = matchItem(itemPhrase);
+        const cleanSkin = skinName.replace(/[^A-Za-zА-Яа-яЁё0-9\s'\-]/g, '').trim();
+
+        return {
+            skin: cleanSkin ? toTitleCase(cleanSkin) : '???',
+            itemDisplay: matched ? matched.display : (itemPhrase ? toTitleCase(itemPhrase) : '???'),
+            price: price || 499
+        };
+    }
+
+    async function analyzeGrid() {
+        const total = grid.cols * grid.rows;
+        const progressWrap = document.getElementById('progressWrap');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const progressPct = document.getElementById('progressPct');
+        const btn = document.getElementById('cutAnalyzeBtn');
+
+        progressWrap.classList.add('active');
+        btn.disabled = true;
+
+        const results = [];
+        let done = 0;
+
+        for (let r = 0; r < grid.rows; r++) {
+            for (let c = 0; c < grid.cols; c++) {
+                const x = grid.offsetLeft + c * (grid.cellW + grid.gapX);
+                const y = grid.offsetTop + r * (grid.cellH + grid.gapY);
+                progressText.textContent = `Ячейка ${done + 1} из ${total}...`;
+
+                try {
+                    const dataUrl = cropCellDataUrl(x, y, grid.cellW, grid.cellH);
+                    const { data } = await Tesseract.recognize(dataUrl, 'eng');
+                    const card = parseCellText(data.text);
+                    if (card) results.push(card);
+                } catch (err) {
+                    console.error('Ошибка распознавания ячейки', r, c, err);
+                }
+
+                done++;
+                const pct = Math.round((done / total) * 100);
+                progressFill.style.width = pct + '%';
+                progressPct.textContent = pct + '%';
+            }
+        }
+
+        progressWrap.classList.remove('active');
+        btn.disabled = false;
+        return results;
+    }
+
+    document.getElementById('cutAnalyzeBtn').addEventListener('click', async () => {
+        if (!originalImg) return;
+        try {
+            cards = await analyzeGrid();
+            renderCards();
+            generateText();
+            goToStep(3);
+        } catch (err) {
+            console.error(err);
+            alert('Не удалось распознать скриншот. Попробуй поправить сетку или добавь скины вручную на следующем шаге.');
+            cards = [];
+            renderCards();
+            goToStep(3);
+        }
+    });
+
+    // ---------------------------------------------------------------
+    // Шаг 3: карточки скинов (проверка)
+    // ---------------------------------------------------------------
+    function renderCards() {
+        const container = document.getElementById('cardsList');
+        if (!cards.length) {
+            container.innerHTML = '<div class="empty-state">Скины не найдены. Добавь вручную кнопкой ниже или вернись назад и поправь сетку.</div>';
+            return;
+        }
+
+        container.innerHTML = cards.map((c, idx) => {
+            const key = rarityKeyForPrice(c.price);
+            const r = RARITY[key];
+            return `
+                <div class="skin-row" data-idx="${idx}">
+                    <div class="skin-row-top">
+                        <span class="rarity-badge ${r.cls}">${r.emoji} ${r.label}</span>
+                        <button type="button" class="remove-btn" onclick="removeCard(${idx})" title="Удалить">✕</button>
+                    </div>
+                    <div class="skin-row-fields">
+                        <div class="full">
+                            <span class="field-label">Название скина</span>
+                            <input type="text" value="${escapeAttr(c.skin)}" oninput="updateCard(${idx}, 'skin', this.value)">
+                        </div>
+                        <div>
+                            <span class="field-label">Предмет</span>
+                            <input type="text" list="itemsDatalist" value="${escapeAttr(c.itemDisplay)}" oninput="updateCard(${idx}, 'itemDisplay', this.value)">
+                        </div>
+                        <div>
+                            <span class="field-label">Цена (кнобзов)</span>
+                            <input type="number" value="${c.price}" oninput="updateCard(${idx}, 'price', this.value)">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updateCard(idx, field, value) {
+        if (field === 'price') {
+            cards[idx].price = parseInt(value, 10) || 0;
+        } else {
+            cards[idx][field] = value;
+        }
+        const row = document.querySelector(`.skin-row[data-idx="${idx}"] .rarity-badge`);
+        if (row) {
+            const r = RARITY[rarityKeyForPrice(cards[idx].price)];
+            row.className = 'rarity-badge ' + r.cls;
+            row.textContent = r.emoji + ' ' + r.label;
+        }
+        generateText();
+    }
+
+    function removeCard(idx) {
+        cards.splice(idx, 1);
+        renderCards();
+        generateText();
+    }
+
+    document.getElementById('addCardBtn').addEventListener('click', () => {
+        cards.push({ skin: '', itemDisplay: '', price: 499 });
+        renderCards();
+        generateText();
+    });
+
+    // ---------------------------------------------------------------
+    // Генерация текста поста
+    // ---------------------------------------------------------------
+    function generateText() {
+        const grouped = { 499: [], 799: [], 1499: [], 2999: [] };
+        cards.forEach(c => {
+            grouped[rarityKeyForPrice(c.price)].push(c);
+        });
+
+        const blocks = [];
+        blocks.push('🛍 **__Ежедневные скины обновились.__**');
+
+        RARITY_ORDER.forEach(key => {
+            const r = RARITY[key];
+            const items = grouped[key];
+            let itemsText;
+            if (items.length) {
+                itemsText = items.map((it, i) => {
+                    const dot = (i === items.length - 1) ? '.' : '';
+                    const item = it.itemDisplay || '???';
+                    const skin = it.skin || '???';
+                    return `⚬ ${item} – **скин "${skin}" | ${it.price} кнобзов${dot}**`;
+                }).join('\n\n');
+            } else {
+                itemsText = `⚬ **${r.empty}**`;
+            }
+            blocks.push(r.sep + '\n\n' + itemsText);
+        });
+
+        const bundlesOn = document.getElementById('bundlesToggle').checked;
+        const bundleTextVal = document.getElementById('bundleText').value.trim();
+        blocks.push(bundlesOn && bundleTextVal ? `❗️ **${bundleTextVal}**` : '❗️ **Новых бандлов нет.**');
+
+        blocks.push('➤ [Подписаться на ɢᴜɪᴅɪɴɢ ʟɪɢʜᴛ || ᴅᴏᴏʀs ɴᴇᴡs](https://t.me/GuidingLightDoorsNews)');
+        blocks.push('**#Roblox #Guiding_light\n#Doors #RobloxDoors**');
+
+        document.getElementById('output').value = blocks.join('\n\n');
+    }
+
+    function copyToClipboard() {
+        const text = document.getElementById('output').value;
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            if (document.execCommand('copy')) {
+                showCopySuccess();
+            } else {
+                alert('Не удалось скопировать автоматически. Выдели текст вручную.');
+            }
+        } catch (err) {
+            alert('Браузер заблокировал копирование. Выдели текст вручную.');
+        }
+        document.body.removeChild(ta);
+    }
+
+    function showCopySuccess() {
+        const btn = document.getElementById('copyBtn');
+        const original = btn.innerText;
+        btn.innerText = '✅ Скопировано в буфер!';
+        btn.style.backgroundColor = 'var(--success)';
+        btn.style.color = '#fff';
+        setTimeout(() => {
+            btn.innerText = original;
+            btn.style.backgroundColor = 'var(--accent)';
+            btn.style.color = '#000';
+        }, 1500);
+    }
+
+    // ---------------------------------------------------------------
+    // Шаг 4: баннер (bg.jpg + скриншот + frame.png)
+    // ---------------------------------------------------------------
+    // Ориентировочное окно под скриншот, вычислено по оранжевым уголкам
+    // на рамке (frame.png, холст 1500x1000). Это только стартовая точка —
+    // дальше подгоняется ползунками.
+    const BANNER_WINDOW = { x: 163, y: 143, w: 1173, h: 714 };
+
+    let banner = { x: 0, y: 0, scale: 100, rotate: 0 };
+    let bannerInited = false;
+
+    const bgImg = new Image();
+    const frameImg = new Image();
+    let bgLoaded = false, frameLoaded = false, bgError = false, frameError = false;
+
+    bgImg.onload = () => { bgLoaded = true; if (currentStep === 4) drawBannerPreview(); updateBannerWarning(); };
+    bgImg.onerror = () => { bgError = true; updateBannerWarning(); };
+    bgImg.src = 'bg.jpg';
+
+    frameImg.onload = () => { frameLoaded = true; if (currentStep === 4) drawBannerPreview(); updateBannerWarning(); };
+    frameImg.onerror = () => { frameError = true; updateBannerWarning(); };
+    frameImg.src = 'frame.png';
+
+    function updateBannerWarning() {
+        const box = document.getElementById('bannerWarning');
+        const missing = [];
+        if (bgError) missing.push('bg.jpg');
+        if (frameError) missing.push('frame.png');
+        if (missing.length) {
+            box.textContent = `Не найден файл: ${missing.join(', ')}. Помести его рядом с index.html (то же имя, тот же регистр) и обнови страницу.`;
+            box.classList.add('active');
+        } else {
+            box.classList.remove('active');
+        }
+    }
+
+    function initBannerDefaults() {
+        if (bannerInited || !originalImg) return;
+        const fitScale = Math.min(BANNER_WINDOW.w / originalImg.naturalWidth, BANNER_WINDOW.h / originalImg.naturalHeight);
+        const dw = originalImg.naturalWidth * fitScale;
+        const dh = originalImg.naturalHeight * fitScale;
+        banner.scale = Math.round(fitScale * 100);
+        banner.x = Math.round(BANNER_WINDOW.x + (BANNER_WINDOW.w - dw) / 2);
+        banner.y = Math.round(BANNER_WINDOW.y + (BANNER_WINDOW.h - dh) / 2);
+        banner.rotate = 0;
+
+        document.getElementById('bannerX').value = banner.x;
+        document.getElementById('bannerY').value = banner.y;
+        document.getElementById('bannerScale').value = banner.scale;
+        document.getElementById('bannerRotate').value = 0;
+        updateBannerSliderLabels();
+        bannerInited = true;
+    }
+
+    function updateBannerSliderLabels() {
+        document.getElementById('bannerXVal').textContent = banner.x + 'px';
+        document.getElementById('bannerYVal').textContent = banner.y + 'px';
+        document.getElementById('bannerScaleVal').textContent = banner.scale + '%';
+        document.getElementById('bannerRotateVal').textContent = banner.rotate + '°';
+    }
+
+    function drawBannerPreview() {
+        const canvas = document.getElementById('bannerCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (bgLoaded) {
+            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = '#2a2a2f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        if (originalImg) {
+            const dw = originalImg.naturalWidth * (banner.scale / 100);
+            const dh = originalImg.naturalHeight * (banner.scale / 100);
+            ctx.save();
+            ctx.translate(banner.x + dw / 2, banner.y + dh / 2);
+            ctx.rotate(banner.rotate * Math.PI / 180);
+            ctx.drawImage(originalImg, -dw / 2, -dh / 2, dw, dh);
+            ctx.restore();
+        }
+
+        if (frameLoaded) {
+            ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    ['bannerX', 'bannerY', 'bannerScale', 'bannerRotate'].forEach(id => {
+        document.getElementById(id).addEventListener('input', e => {
+            const key = id.replace('banner', '').toLowerCase();
+            banner[key] = parseInt(e.target.value, 10) || 0;
+            updateBannerSliderLabels();
+            drawBannerPreview();
+        });
+    });
+
+    document.getElementById('toBannerBtn').addEventListener('click', () => {
+        initBannerDefaults();
+        goToStep(4);
+        drawBannerPreview();
+    });
+
+    document.getElementById('downloadBannerBtn').addEventListener('click', () => {
+        const canvas = document.getElementById('bannerCanvas');
+        const link = document.createElement('a');
+        link.download = 'banner.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+
+    // ---------------------------------------------------------------
+    // Навигация по шагам
+    // ---------------------------------------------------------------
+    const STEP_LABELS = {
+        1: 'Шаг 1 из 4 · Скриншот',
+        2: 'Шаг 2 из 4 · Сетка',
+        3: 'Шаг 3 из 4 · Проверка',
+        4: 'Шаг 4 из 4 · Баннер'
+    };
+
+    function goToStep(n) {
+        document.querySelector(`.step-content[data-step="${currentStep}"]`).classList.remove('active');
+        currentStep = n;
+        document.querySelector(`.step-content[data-step="${currentStep}"]`).classList.add('active');
+        document.getElementById('stepIndicator').textContent = STEP_LABELS[currentStep];
+        document.getElementById('prevBtn').style.display = currentStep === 1 ? 'none' : 'block';
+        document.getElementById('resetBtn').style.display = currentStep > 1 ? 'block' : 'none';
+        if (currentStep === 2) redrawGridPreview();
+        if (currentStep === 4) { initBannerDefaults(); drawBannerPreview(); }
+    }
+
+    function changeStep(direction) {
+        goToStep(Math.min(4, Math.max(1, currentStep + direction)));
+    }
+
+    function resetAll() {
+        cards = [];
+        originalImg = null;
+        bannerInited = false;
+        document.getElementById('fileInput').value = '';
+        document.getElementById('previewWrap').classList.remove('active');
+        document.getElementById('toGridBtn').disabled = true;
+        document.getElementById('output').value = 'Загрузи скриншот магазина, подгони сетку и нажми «Вырезать и распознать» — здесь появится готовый текст поста.';
+        goToStep(1);
+    }
+
+    document.getElementById('bundlesToggle').addEventListener('change', function () {
+        document.getElementById('bundleTextWrap').style.display = this.checked ? 'block' : 'none';
+        generateText();
+    });
+    document.getElementById('bundleText').addEventListener('input', generateText);
+
+    // ---------------------------------------------------------------
+    // Инициализация
+    // ---------------------------------------------------------------
+    function init() {
+        const datalist = document.getElementById('itemsDatalist');
+        datalist.innerHTML = ITEM_DB.map(it => `<option value="${escapeAttr(it.display)}">`).join('');
+    }
+
+    init();
+</script>
+
+</body>
+</html>
